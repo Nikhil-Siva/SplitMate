@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SplitMate — Group Expense Splitter</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════
+   THEME TOKENS
+═══════════════════════════════════════ */
+:root {
+  --accent:   #c8f45a;
+  --accent-r: #ff6b6b;
+  --accent-b: #54a0ff;
+  --accent-o: #ff9f43;
+  --accent-p: #a29bfe;
+  --accent-g: #26de81;
+  --food:     #ff9f43;
+  --travel:   #54a0ff;
+  --outing:   #c8f45a;
+  --other:    #ff6b6b;
+  --radius:   12px;
+  --radius-lg:18px;
+}
+[data-theme="dark"] {
+  --bg:       #0d0d0f;
+  --surface:  #16161a;
+  --surface2: #1e1e24;
+  --surface3: #252530;
+  --border:   #2a2a36;
+  --border2:  #383848;
+  --text:     #f0f0f4;
+  --text2:    #9898aa;
+  --text3:    #5c5c70;
+  --shadow:   rgba(0,0,0,0.4);
+}
+[data-theme="light"] {
+  --bg:       #f2f2f7;
+  --surface:  #ffffff;
+  --surface2: #f7f7fc;
+  --surface3: #ececf4;
+  --border:   #e0e0ec;
+  --border2:  #cacad8;
+  --text:     #111118;
+  --text2:    #5c5c70;
+  --text3:    #9898aa;
+  --shadow:   rgba(0,0,0,0.08);
+}
+
+/* ═══════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
+
+/* ═══════════════════════════════════════
+   SPLASH
+═══════════════════════════════════════ */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:opacity .5s}
+#splash .s-logo{font-family:'Syne',sans-serif;font-size:3.5rem;font-weight:800;color:var(--accent);letter-spacing:-2px;animation:pop .7s cubic-bezier(.34,1.56,.64,1) both}
+#splash .s-sub{color:var(--text2);font-size:.95rem;animation:pop .7s .1s cubic-bezier(.34,1.56,.64,1) both}
+#splash .s-bar{width:180px;height:3px;background:var(--surface3);border-radius:4px;margin-top:28px;overflow:hidden}
+#splash .s-fill{height:100%;background:var(--accent);animation:fill 1.8s ease forwards}
+@keyframes pop{from{opacity:0;transform:scale(.85) translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fill{0%{width:0}60%{width:65%}100%{width:100%}}
+
+/* ═══════════════════════════════════════
+   HEADER
+═══════════════════════════════════════ */
+header{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;gap:12px;transition:background .3s,border-color .3s}
+.brand{font-family:'Syne',sans-serif;font-weight:800;font-size:1.25rem;color:var(--accent);letter-spacing:-.5px;white-space:nowrap}
+.brand em{font-style:normal;font-weight:400;font-size:.78rem;color:var(--text3);margin-left:6px}
+.nav{display:flex;gap:3px;flex-wrap:wrap}
+.nav-btn{padding:6px 14px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:.85rem;cursor:pointer;transition:all .18s;white-space:nowrap}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.active{background:var(--accent);color:#111;font-weight:500}
+.header-right{display:flex;align-items:center;gap:8px}
+.theme-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .18s}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ═══════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════ */
+main{max-width:1100px;margin:0 auto;padding:1.5rem}
+.section{display:none;animation:fadein .25s ease}
+.section.active{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ═══════════════════════════════════════
+   CARDS
+═══════════════════════════════════════ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1.25rem;transition:background .3s,border-color .3s}
+.card-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;margin-bottom:1.1rem;display:flex;align-items:center;gap:8px;color:var(--text)}
+.card-title .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* ═══════════════════════════════════════
+   FORMS
+═══════════════════════════════════════ */
+.form-grid{display:grid;gap:10px;margin-bottom:10px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:1fr 1fr 1fr auto}
+label.lbl{display:block;font-size:.72rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;
+  transition:border-color .18s,background .3s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface2);color:var(--text)}
+textarea{resize:vertical;min-height:64px}
+
+/* ═══════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .18s}
+.btn-primary{background:var(--accent);color:#111}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:transparent;border:1px solid var(--accent-r);color:var(--accent-r)}
+.btn-danger:hover{background:var(--accent-r);color:#fff}
+.btn-sm{padding:5px 11px;font-size:.78rem;border-radius:7px}
+.btn-pay{background:var(--accent);color:#111;border:none;border-radius:8px;padding:7px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;flex-shrink:0}
+.btn-pay:hover{opacity:.85;transform:scale(1.03)}
+.btn-undo{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:7px 14px;font-size:.8rem;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;flex-shrink:0}
+.btn-undo:hover{border-color:var(--accent-r);color:var(--accent-r)}
+.btn-pay-all{background:var(--accent);color:#111;border:none;border-radius:9px;padding:9px 20px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-pay-all:hover{opacity:.88;transform:translateY(-1px)}
+
+/* ═══════════════════════════════════════
+   TABLES
+═══════════════════════════════════════ */
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;min-width:500px}
+thead{background:var(--surface2)}
+th{padding:10px 14px;text-align:left;font-size:.72rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:10px 14px;font-size:.85rem;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(200,244,90,.03)}
+.tbl-empty{text-align:center;padding:2rem;color:var(--text3);font-size:.85rem}
+
+/* ═══════════════════════════════════════
+   STATS ROW
+═══════════════════════════════════════ */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;transition:background .3s,border-color .3s}
+.stat-lbl{font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-weight:600}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.45rem;font-weight:700}
+
+/* ═══════════════════════════════════════
+   MEMBER CHIPS
+═══════════════════════════════════════ */
+.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:10px}
+.m-chip{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:8px;transition:border-color .18s}
+.m-chip:hover{border-color:var(--border2)}
+.m-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0}
+.m-info{flex:1;min-width:0}
+.m-name{font-size:.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-upi{font-size:.7rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:.9rem;padding:0 2px;line-height:1;flex-shrink:0;transition:color .15s}
+.m-del:hover{color:var(--accent-r)}
+
+/* ═══════════════════════════════════════
+   COLOUR SWATCHES
+═══════════════════════════════════════ */
+.color-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.c-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s;flex-shrink:0}
+.c-swatch:hover{transform:scale(1.18)}
+.c-swatch.selected{border-color:var(--text);transform:scale(1.18)}
+
+/* ═══════════════════════════════════════
+   CATEGORY PILLS
+═══════════════════════════════════════ */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600}
+.pill-food{background:rgba(255,159,67,.15);color:var(--food)}
+.pill-travel{background:rgba(84,160,255,.15);color:var(--travel)}
+.pill-outing{background:rgba(200,244,90,.15);color:var(--outing)}
+.pill-other{background:rgba(255,107,107,.15);color:var(--other)}
+
+/* ═══════════════════════════════════════
+   CHECKBOX GROUP
+═══════════════════════════════════════ */
+.check-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.p-check{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.83rem;user-select:none;transition:all .15s}
+.p-check input{accent-color:var(--accent);cursor:pointer}
+.p-check:has(input:checked){border-color:var(--accent);color:var(--accent);background:rgba(200,244,90,.07)}
+
+/* ═══════════════════════════════════════
+   BREAKDOWN BARS
+═══════════════════════════════════════ */
+.bar-item{margin-bottom:11px}
+.bar-header{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px}
+.bar-bg{height:7px;background:var(--surface3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+
+/* ═══════════════════════════════════════
+   TRIP HERO
+═══════════════════════════════════════ */
+.trip-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;transition:background .3s,border-color .3s}
+.hero-name{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:var(--accent);line-height:1.1}
+.hero-meta{color:var(--text2);font-size:.85rem;margin-top:4px}
+.hero-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.hero-tag{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.75rem}
+
+/* ═══════════════════════════════════════
+   SETTLE SUMMARY BAR
+═══════════════════════════════════════ */
+.settle-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.settle-stat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;text-align:center}
+.ss-val{font-family:'Syne',sans-serif;font-size:1.35rem;font-weight:700}
+.ss-lbl{font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.settle-lbl{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px}
+.settle-list{display:flex;flex-direction:column;gap:8px}
+
+/* ═══════════════════════════════════════
+   CREDITOR GROUP (per-payer grouping)
+═══════════════════════════════════════ */
+.creditor-group{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px}
+.creditor-header{background:var(--surface2);padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.creditor-header-left{display:flex;align-items:center;gap:10px;flex:1}
+.creditor-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700}
+.creditor-subtitle{font-size:.75rem;color:var(--text2);margin-top:1px}
+.creditor-total{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--accent)}
+.creditor-rows{display:flex;flex-direction:column}
+
+/* Settlement row — one row per (debtor, expense) pair */
+.s-row{background:var(--surface);padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .15s}
+.s-row:last-child{border-bottom:none}
+.s-row:hover{background:var(--surface2)}
+.s-row.is-paid{opacity:.5}
+.s-row-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.s-row-mid{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:90px;flex-shrink:0}
+.s-row-right{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-shrink:0}
+.s-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.s-name{font-size:.88rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-sub{font-size:.7rem;color:var(--text2)}
+.s-exp-label{font-size:.7rem;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.s-amt{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--accent-r)}
+.s-amt-paid{color:var(--accent);text-decoration:line-through}
+.s-arrow{display:flex;align-items:center;gap:2px;color:var(--text3);font-size:.7rem}
+.s-line{width:18px;height:1px;background:var(--border2)}
+.s-upi{font-size:.68rem;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2px 7px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis}
+
+/* ═══════════════════════════════════════
+   BADGE
+═══════════════════════════════════════ */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600}
+.badge-green{background:rgba(200,244,90,.15);color:var(--accent)}
+.badge-red{background:rgba(255,107,107,.15);color:var(--accent-r)}
+
+/* ═══════════════════════════════════════
+   TRIPS LIST
+═══════════════════════════════════════ */
+.trips-list{display:flex;flex-direction:column;gap:8px}
+.trip-row{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .18s}
+.trip-row:hover{border-color:var(--accent)}
+.trip-row.active-trip{border-color:var(--accent);background:rgba(200,244,90,.06)}
+.trip-row-name{font-weight:500;font-size:.9rem;flex:1}
+.trip-row-meta{font-size:.75rem;color:var(--text2)}
+
+/* ═══════════════════════════════════════
+   FILTER BAR
+═══════════════════════════════════════ */
+.filter-bar{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.f-btn{padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:.78rem;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.f-btn:hover{border-color:var(--border2);color:var(--text)}
+.f-btn.f-active{background:var(--accent);color:#111;border-color:transparent;font-weight:500}
+
+/* ═══════════════════════════════════════
+   DIVIDER / TOAST / MODAL
+═══════════════════════════════════════ */
+.divider{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+#toast{position:fixed;bottom:20px;right:20px;z-index:9998;background:var(--surface);border:1px solid var(--accent);color:var(--accent);border-radius:10px;padding:10px 18px;font-size:.85rem;font-weight:500;opacity:0;transform:translateY(16px);transition:all .28s;pointer-events:none}
+#toast.show{opacity:1;transform:none}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-bg.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;max-width:380px;width:90%;animation:pop .25s ease}
+.modal h3{font-family:'Syne',sans-serif;font-size:1.1rem;margin-bottom:.5rem}
+.modal p{color:var(--text2);font-size:.88rem;margin-bottom:1.25rem;line-height:1.5}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+
+/* ═══════════════════════════════════════
+   IFRAME
+═══════════════════════════════════════ */
+.iframe-wrap{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+iframe{width:100%;border:none;display:block}
+
+/* ═══════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════ */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media(max-width:680px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .stats-row,.settle-bar{grid-template-columns:1fr 1fr}
+  main{padding:1rem}
+  .trip-hero{flex-direction:column}
+  .nav-btn{padding:5px 10px;font-size:.78rem}
+  .s-exp-label{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="s-logo">SplitMate</div>
+  <div class="s-sub">Group expense splitter</div>
+  <div class="s-bar"><div class="s-fill"></div></div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Confirm</h3>
+    <p id="modal-body">Are you sure?</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="modal-confirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">SplitMate <em>v3.0</em></div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
+    <button class="nav-btn" onclick="showTab('members',this)">Members</button>
+    <button class="nav-btn" onclick="showTab('expenses',this)">Expenses</button>
+    <button class="nav-btn" onclick="showTab('settle',this)">Settle Up</button>
+    <button class="nav-btn" onclick="showTab('trips',this)">Trips</button>
+    <button class="nav-btn" onclick="showTab('currency',this)">Currency</button>
+  </nav>
+  <div class="header-right">
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme" id="theme-btn">🌙</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════ -->
+<section id="tab-dashboard" class="section active">
+
+  <div class="card" id="trip-form-card">
+    <div class="card-title"><span class="dot"></span>New Trip</div>
+    <div class="form-grid g3">
+      <div><label class="lbl">Trip Name</label><input type="text" id="tripName" placeholder="e.g. Goa 2025"/></div>
+      <div><label class="lbl">Date</label><input type="date" id="tripDate"/></div>
+      <div><label class="lbl">Currency</label>
+        <select id="tripCurrency">
+          <option value="INR">₹ INR</option><option value="USD">$ USD</option>
+          <option value="EUR">€ EUR</option><option value="GBP">£ GBP</option>
+          <option value="JPY">¥ JPY</option><option value="AED">AED</option>
+          <option value="AUD">A$ AUD</option><option value="SGD">S$ SGD</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div><label class="lbl">Notes</label><textarea id="tripNotes" placeholder="Any trip notes…"></textarea></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveTrip()">💾 Save Trip</button>
+  </div>
+
+  <div id="hero-area" style="display:none">
+    <div class="trip-hero">
+      <div>
+        <div class="hero-name" id="hero-name"></div>
+        <div class="hero-meta" id="hero-meta"></div>
+        <div class="hero-tags" id="hero-tags"></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" onclick="editTrip()">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteTrip()">🗑️ Delete Trip</button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-lbl">Total Spent</div><div class="stat-val" style="color:var(--accent)" id="st-total">₹0</div></div>
+      <div class="stat-card"><div class="stat-lbl">🍔 Food</div><div class="stat-val" style="color:var(--food)" id="st-food">₹0</div></div>
+      <div class="stat-card"><div class="stat-lbl">✈️ Travel</div><div class="stat-val" style="color:var(--travel)" id="st-travel">₹0</div></div>
+      <div class="stat-card"><div class="stat-lbl">🎉 Outing</div><div class="stat-val" style="color:var(--accent-p)" id="st-outing">₹0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Expense Breakdown</div>
+      <div id="breakdown"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     MEMBERS
+══════════════════════════════════════ -->
+<section id="tab-members" class="section">
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Add Member</div>
+    <div class="form-grid g3">
+      <div><label class="lbl">Name</label><input type="text" id="mName" placeholder="e.g. Arun Kumar" onkeydown="if(event.key==='Enter')addMember()"/></div>
+      <div><label class="lbl">UPI / Phone (optional)</label><input type="text" id="mUPI" placeholder="upi@bank"/></div>
+      <div>
+        <label class="lbl">Avatar Color</label>
+        <div class="color-row" id="color-swatches"></div>
+        <input type="hidden" id="mColor" value="#c8f45a"/>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="addMember()" style="margin-top:6px">+ Add Member</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Members <span id="m-count" style="color:var(--text2);font-weight:400;font-size:.85rem"></span></div>
+    <div class="members-grid" id="members-grid"><div class="tbl-empty">No members yet.</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Balance Summary</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Member</th><th>Paid Out</th><th>Fair Share</th><th>Balance</th><th>Status</th></tr></thead>
+        <tbody id="summary-body"><tr><td class="tbl-empty" colspan="5">No data</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     EXPENSES
+══════════════════════════════════════ -->
+<section id="tab-expenses" class="section">
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Add Expense</div>
+    <div class="form-grid g3">
+      <div><label class="lbl">Description</label><input type="text" id="eDesc" placeholder="e.g. Dinner at Spice Garden"/></div>
+      <div><label class="lbl">Amount</label><input type="number" id="eAmt" placeholder="0.00" min="0" step="0.01"/></div>
+      <div><label class="lbl">Category</label>
+        <select id="eCat">
+          <option value="food">🍔 Food</option>
+          <option value="travel">✈️ Travel</option>
+          <option value="outing">🎉 Outing</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid g2">
+      <div><label class="lbl">Paid By</label><select id="ePaidBy"><option value="">— add members first —</option></select></div>
+      <div><label class="lbl">Date</label><input type="date" id="eDate"/></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label class="lbl">Split Between</label>
+      <div class="check-group" id="split-checks"><div style="color:var(--text3);font-size:.83rem;padding:4px 0">Add members first</div></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" onclick="addExpense()">+ Add Expense</button>
+      <button class="btn btn-ghost btn-sm" onclick="selectAllSplit()">Select All</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="f-btn f-active" onclick="filterExp('all',this)">All</button>
+    <button class="f-btn" onclick="filterExp('food',this)">🍔 Food</button>
+    <button class="f-btn" onclick="filterExp('travel',this)">✈️ Travel</button>
+    <button class="f-btn" onclick="filterExp('outing',this)">🎉 Outing</button>
+    <button class="f-btn" onclick="filterExp('other',this)">📦 Other</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇️ Export CSV</button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Description</th><th>Category</th><th>Amount</th><th>Paid By</th><th>Split (n)</th><th>Per Person</th><th>Date</th><th></th></tr></thead>
+      <tbody id="exp-body"><tr><td class="tbl-empty" colspan="8">No expenses yet</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SETTLE UP
+══════════════════════════════════════ -->
+<section id="tab-settle" class="section">
+
+  <div class="card" id="settle-card">
+    <div class="card-title"><span class="dot"></span>Settlement Summary</div>
+    <div id="settle-content"><div class="tbl-empty">Add members and expenses to see settlements.</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Per-Person Breakdown</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Member</th><th>🍔 Food</th><th>✈️ Travel</th><th>🎉 Outing</th><th>📦 Other</th><th>Total Share</th><th>Net Balance</th></tr></thead>
+        <tbody id="pp-body"><tr><td class="tbl-empty" colspan="7">No data</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     TRIPS HISTORY
+══════════════════════════════════════ -->
+<section id="tab-trips" class="section">
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>All Trips</div>
+    <div style="margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" onclick="showTab('dashboard',document.querySelector('.nav-btn'));document.querySelector('.nav-btn').click();document.getElementById('trip-form-card').style.display='block';document.getElementById('hero-area').style.display='none'">+ New Trip</button>
+    </div>
+    <div id="trips-list"><div class="tbl-empty">No saved trips.</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     CURRENCY
+══════════════════════════════════════ -->
+<section id="tab-currency" class="section">
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Currency Converter</div>
+    <div class="form-grid g3" style="align-items:flex-end">
+      <div><label class="lbl">Amount</label><input type="number" id="cvtAmt" value="100" min="0"/></div>
+      <div><label class="lbl">From</label>
+        <select id="cvtFrom">
+          <option value="INR">INR ₹</option><option value="USD">USD $</option>
+          <option value="EUR">EUR €</option><option value="GBP">GBP £</option>
+          <option value="JPY">JPY ¥</option><option value="AED">AED</option>
+          <option value="AUD">AUD A$</option><option value="SGD">SGD S$</option>
+        </select>
+      </div>
+      <div><label class="lbl">To</label>
+        <select id="cvtTo">
+          <option value="USD">USD $</option><option value="INR">INR ₹</option>
+          <option value="EUR">EUR €</option><option value="GBP">GBP £</option>
+          <option value="JPY">JPY ¥</option><option value="AED">AED</option>
+          <option value="AUD">AUD A$</option><option value="SGD">SGD S$</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="convertCurrency()" style="margin:10px 0">Convert</button>
+    <div id="cvt-result" style="font-family:'Syne',sans-serif;font-size:1.4rem;color:var(--accent);min-height:2rem"></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Live Rates Reference</div>
+    <p style="color:var(--text2);font-size:.83rem;margin-bottom:10px">Live exchange rates from XE.com — INR base</p>
+    <div class="iframe-wrap"><iframe src="https://www.xe.com/currencytables/?from=INR" height="460" title="Exchange Rates"></iframe></div>
+  </div>
+</section>
+
+</main>
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────
+const MEMBER_COLORS = [
+  '#c8f45a','#54a0ff','#ff9f43','#ff6b6b','#a29bfe',
+  '#26de81','#fd79a8','#00cec9','#fdcb6e','#e17055',
+  '#74b9ff','#81ecec','#fab1a0','#ff5252','#69d2e7',
+  '#f9ca24','#6ab04c','#eb4d4b','#be2edd','#0652dd',
+  '#833471','#009432','#1289A7','#D980FA','#F79F1F',
+  '#EA2027','#006266','#5758BB','#EE5A24','#C4E538'
+];
+
+const SYM_MAP  = {INR:'₹',USD:'$',EUR:'€',GBP:'£',JPY:'¥',AED:'AED ',AUD:'A$',SGD:'S$'};
+const RATE_MAP = {INR:1,USD:0.012,EUR:0.011,GBP:0.0095,JPY:1.79,AED:0.044,AUD:0.019,SGD:0.016};
+const CAT_ICON = {food:'🍔',travel:'✈️',outing:'🎉',other:'📦'};
+const CAT_COLOR= {food:'var(--food)',travel:'var(--travel)',outing:'var(--outing)',other:'var(--other)'};
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let S = {
+  trips:    [],
+  activeId: null,
+  members:  [],
+  expenses: [],
+  paidTxns: [],  // array of key strings (debtor__creditor__expenseId)
+  tripData: {},
+  theme:    'dark'
+};
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const uid         = () => String(Date.now()) + Math.random().toString(36).slice(2,7);
+const activeTrip  = () => S.trips.find(t => t.id === S.activeId) || null;
+const sym         = () => { const t = activeTrip(); return t ? (SYM_MAP[t.currency]||'₹') : '₹'; };
+const fmt         = n  => sym() + Number(n).toFixed(2);
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ─────────────────────────────────────────────
+// THEME
+// ─────────────────────────────────────────────
+function toggleTheme() {
+  S.theme = S.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(); save();
+}
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', S.theme);
+  document.getElementById('theme-btn').textContent = S.theme === 'dark' ? '☀️' : '🌙';
+}
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+let modalCb = null;
+function openModal(title, body, cb, confirmLabel) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent  = body;
+  document.getElementById('modal-confirm').textContent = confirmLabel || 'Delete';
+  modalCb = cb;
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modal-confirm').onclick = () => { closeModal(); cb && cb(); };
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'settle')    renderSettle();
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'trips')     renderTrips();
+}
+
+// ─────────────────────────────────────────────
+// COLOR SWATCHES
+// ─────────────────────────────────────────────
+function buildSwatches() {
+  const wrap = document.getElementById('color-swatches');
+  const sel  = document.getElementById('mColor').value || MEMBER_COLORS[0];
+  wrap.innerHTML = MEMBER_COLORS.map(c =>
+    `<div class="c-swatch${c===sel?' selected':''}" style="background:${c}" data-c="${c}" onclick="pickColor('${c}',this)" title="${c}"></div>`
+  ).join('');
+}
+function pickColor(c, el) {
+  document.getElementById('mColor').value = c;
+  document.querySelectorAll('.c-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ─────────────────────────────────────────────
+// TRIP CRUD
+// ─────────────────────────────────────────────
+function saveTrip() {
+  const name = document.getElementById('tripName').value.trim();
+  if (!name) return toast('⚠️ Enter a trip name');
+  const editing = document.getElementById('trip-form-card').dataset.editing === 'true';
+  const trip = {
+    id:       editing ? S.activeId : uid(),
+    name,
+    date:     document.getElementById('tripDate').value,
+    currency: document.getElementById('tripCurrency').value,
+    notes:    document.getElementById('tripNotes').value.trim()
+  };
+  if (editing) {
+    const idx = S.trips.findIndex(t => t.id === S.activeId);
+    if (idx !== -1) S.trips[idx] = trip;
+  } else {
+    S.trips.push(trip);
+    S.activeId = trip.id;
+    S.members  = [];
+    S.expenses = [];
+    S.paidTxns = [];
+  }
+  document.getElementById('trip-form-card').dataset.editing = 'false';
+  document.getElementById('trip-form-card').style.display = 'none';
+  renderDashboard();
+  renderTrips();
+  renderPaidBySelect();
+  renderSplitChecks();
+  save();
+  toast('✅ Trip saved!');
+}
+
+function editTrip() {
+  const t = activeTrip();
+  if (!t) return;
+  document.getElementById('tripName').value     = t.name;
+  document.getElementById('tripDate').value     = t.date;
+  document.getElementById('tripCurrency').value = t.currency;
+  document.getElementById('tripNotes').value    = t.notes || '';
+  document.getElementById('trip-form-card').dataset.editing = 'true';
+  document.getElementById('trip-form-card').style.display = 'block';
+  document.getElementById('hero-area').style.display = 'none';
+}
+
+function confirmDeleteTrip() {
+  const t = activeTrip();
+  if (!t) return;
+  openModal('Delete Trip', `Delete "${t.name}"? All members and expenses will be lost.`, deleteTrip, 'Delete');
+}
+
+function deleteTrip() {
+  deleteTripById(S.activeId);
+}
+
+// ─────────────────────────────────────────────
+// TRIP DATA (multi-trip storage)
+// ─────────────────────────────────────────────
+function saveTripData() {
+  if (!S.activeId) return;
+  if (!S.tripData) S.tripData = {};
+  S.tripData[S.activeId] = { members: S.members, expenses: S.expenses, paidTxns: S.paidTxns };
+}
+function loadTripData(id) {
+  if (!S.tripData) S.tripData = {};
+  const d = S.tripData[id] || { members:[], expenses:[], paidTxns:[] };
+  S.members  = (d.members  || []).map(m => ({...m, id:String(m.id)}));
+  S.expenses = (d.expenses || []).map(e => ({
+    ...e, id:String(e.id), paidBy:String(e.paidBy),
+    splitWith:(e.splitWith||[]).map(String)
+  }));
+  S.paidTxns = d.paidTxns || [];
+}
+
+function switchTrip(id) {
+  saveTripData();
+  S.activeId = id;
+  loadTripData(id);
+  renderDashboard();
+  renderMembers();
+  renderExpenses();
+  renderTrips();
+  renderPaidBySelect();
+  renderSplitChecks();
+  showTab('dashboard', document.querySelector('.nav-btn'));
+  document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  toast('✅ Switched to ' + (activeTrip()?.name || 'trip'));
+}
+
+// ─────────────────────────────────────────────
+// TRIPS LIST
+// ─────────────────────────────────────────────
+function renderTrips() {
+  const el = document.getElementById('trips-list');
+  if (!S.trips.length) { el.innerHTML = '<div class="tbl-empty">No saved trips yet.</div>'; return; }
+  el.innerHTML = '<div class="trips-list">' + S.trips.map(t => {
+    const isActive = t.id === S.activeId;
+    const expCount = (S.tripData?.[t.id]?.expenses || (isActive ? S.expenses : [])).length;
+    const memCount = (S.tripData?.[t.id]?.members  || (isActive ? S.members  : [])).length;
+    return `
+    <div class="trip-row${isActive?' active-trip':''}" onclick="switchTrip('${t.id}')">
+      <div style="flex:1">
+        <div class="trip-row-name">${t.name}${isActive?' <span style="color:var(--accent);font-size:.7rem">● current</span>':''}</div>
+        <div class="trip-row-meta">${t.date||''} · ${t.currency} · ${memCount} member${memCount!==1?'s':''} · ${expCount} expense${expCount!==1?'s':''}</div>
+        ${t.notes ? `<div class="trip-row-meta" style="margin-top:2px;font-style:italic">${t.notes}</div>` : ''}
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();confirmDeleteSingleTrip('${t.id}','${t.name.replace(/'/g,"\\'")}')">🗑️ Remove</button>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function confirmDeleteSingleTrip(id, name) {
+  openModal('Remove Trip', `Remove "${name}" and all its data? This cannot be undone.`, () => deleteTripById(id), 'Remove');
+}
+function deleteTripById(id) {
+  saveTripData();
+  if (S.tripData) delete S.tripData[id];
+  S.trips = S.trips.filter(t => t.id !== id);
+  if (S.activeId === id) {
+    S.activeId = S.trips.length ? S.trips[0].id : null;
+    if (S.activeId) loadTripData(S.activeId);
+    else { S.members=[]; S.expenses=[]; S.paidTxns=[]; }
+  }
+  renderDashboard();
+  renderTrips();
+  renderMembers();
+  renderExpenses();
+  renderPaidBySelect();
+  renderSplitChecks();
+  save();
+  toast('🗑️ Trip removed');
+}
+
+// ─────────────────────────────────────────────
+// DASHBOARD RENDER
+// ─────────────────────────────────────────────
+function renderDashboard() {
+  const t = activeTrip();
+  if (!t) {
+    document.getElementById('hero-area').style.display = 'none';
+    document.getElementById('trip-form-card').style.display = 'block';
+    return;
+  }
+  document.getElementById('trip-form-card').style.display = 'none';
+  document.getElementById('hero-area').style.display = 'block';
+  document.getElementById('hero-name').textContent = t.name;
+  document.getElementById('hero-meta').textContent = [t.date, t.currency, t.notes].filter(Boolean).join(' · ');
+
+  document.getElementById('hero-tags').innerHTML = S.members.map(m =>
+    `<span class="hero-tag"><span style="width:7px;height:7px;border-radius:50%;background:${m.color};display:inline-block"></span>${m.name}</span>`
+  ).join('');
+
+  const cats = {food:0,travel:0,outing:0,other:0};
+  S.expenses.forEach(e => { cats[e.category] = (cats[e.category]||0) + e.amount; });
+  const total = Object.values(cats).reduce((a,b)=>a+b,0);
+
+  document.getElementById('st-total').textContent  = fmt(total);
+  document.getElementById('st-food').textContent   = fmt(cats.food);
+  document.getElementById('st-travel').textContent = fmt(cats.travel);
+  document.getElementById('st-outing').textContent = fmt(cats.outing);
+
+  const bb = document.getElementById('breakdown');
+  if (total === 0) { bb.innerHTML = '<div class="tbl-empty">No expenses yet.</div>'; return; }
+  const CAT_LABELS = {food:'🍔 Food',travel:'✈️ Travel',outing:'🎉 Outing',other:'📦 Other'};
+  bb.innerHTML = Object.entries(cats).map(([cat,val]) => `
+    <div class="bar-item">
+      <div class="bar-header">
+        <span>${CAT_LABELS[cat]}</span>
+        <span style="font-weight:500">${fmt(val)} <span style="color:var(--text2)">(${total?(val/total*100).toFixed(1):0}%)</span></span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${total?val/total*100:0}%;background:${CAT_COLOR[cat]}"></div></div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────
+// MEMBERS
+// ─────────────────────────────────────────────
+function addMember() {
+  const name = document.getElementById('mName').value.trim();
+  if (!name) return toast('⚠️ Enter a name');
+  if (S.members.find(m => m.name.toLowerCase()===name.toLowerCase())) return toast('⚠️ Member already exists');
+  const color = document.getElementById('mColor').value || MEMBER_COLORS[S.members.length % MEMBER_COLORS.length];
+  S.members.push({ id:uid(), name, upi:document.getElementById('mUPI').value.trim(), color });
+  document.getElementById('mName').value = '';
+  document.getElementById('mUPI').value  = '';
+  renderMembers();
+  renderPaidBySelect();
+  renderSplitChecks();
+  save();
+  toast('✅ '+name+' added');
+}
+
+function removeMember(id) {
+  openModal('Remove Member','Remove this member? Their expenses will remain but may show errors.', () => {
+    S.members = S.members.filter(m => m.id !== id);
+    renderMembers();
+    renderPaidBySelect();
+    renderSplitChecks();
+    renderMemberSummary();
+    save();
+  }, 'Remove');
+}
+
+function renderMembers() {
+  document.getElementById('m-count').textContent = S.members.length ? `(${S.members.length})` : '';
+  const grid = document.getElementById('members-grid');
+  if (!S.members.length) { grid.innerHTML = '<div class="tbl-empty">No members yet.</div>'; renderMemberSummary(); return; }
+  grid.innerHTML = S.members.map(m => `
+    <div class="m-chip">
+      <div class="m-avatar" style="background:${m.color}22;color:${m.color}">${m.name.slice(0,2).toUpperCase()}</div>
+      <div class="m-info">
+        <div class="m-name">${m.name}</div>
+        ${m.upi ? `<div class="m-upi">${m.upi}</div>` : ''}
+      </div>
+      <button class="m-del" onclick="removeMember('${m.id}')" title="Remove">✕</button>
+    </div>`).join('');
+  renderMemberSummary();
+}
+
+function renderMemberSummary() {
+  const tbody = document.getElementById('summary-body');
+  if (!S.members.length) { tbody.innerHTML = '<tr><td class="tbl-empty" colspan="5">No members</td></tr>'; return; }
+  const {totalPaid, fairShare, netBal} = computeBalances();
+  tbody.innerHTML = S.members.map(m => {
+    const paid = totalPaid[m.id] || 0;
+    const share= fairShare[m.id] || 0;
+    const bal  = netBal[m.id]   || 0;
+    return `<tr>
+      <td><span style="display:inline-flex;align-items:center;gap:7px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${m.color};display:inline-block"></span>${m.name}
+      </span></td>
+      <td>${fmt(paid)}</td>
+      <td>${fmt(share)}</td>
+      <td style="font-weight:500;color:${bal>=0?'var(--accent)':'var(--accent-r)'}">${bal>=0?'+':''}${fmt(Math.abs(bal)).replace(sym(),'')} ${sym()}</td>
+      <td><span class="badge ${bal>=0?'badge-green':'badge-red'}">${bal>=0?'Gets back':'Owes'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// EXPENSES
+// ─────────────────────────────────────────────
+function addExpense() {
+  const desc      = document.getElementById('eDesc').value.trim();
+  const amount    = parseFloat(document.getElementById('eAmt').value);
+  const category  = document.getElementById('eCat').value;
+  const paidBy    = document.getElementById('ePaidBy').value;
+  const date      = document.getElementById('eDate').value;
+  const splitWith = Array.from(document.querySelectorAll('.split-cb:checked')).map(c => c.value);
+
+  if (!desc)                    return toast('⚠️ Enter a description');
+  if (isNaN(amount)||amount<=0) return toast('⚠️ Enter a valid amount');
+  if (!paidBy)                  return toast('⚠️ Select who paid');
+  if (!splitWith.length)        return toast('⚠️ Select at least one person to split with');
+
+  S.expenses.push({ id:uid(), desc, amount, category, paidBy, splitWith, date });
+  document.getElementById('eDesc').value = '';
+  document.getElementById('eAmt').value  = '';
+  renderExpenses();
+  renderMemberSummary();
+  if (activeTrip()) renderDashboard();
+  save();
+  toast(`✅ ${fmt(amount)} added`);
+}
+
+function deleteExpense(id) {
+  // Remove any paid txn keys linked to this expense
+  S.paidTxns = S.paidTxns.filter(k => !k.endsWith('__' + id));
+  S.expenses  = S.expenses.filter(e => e.id !== id);
+  renderExpenses();
+  renderMemberSummary();
+  if (activeTrip()) renderDashboard();
+  save();
+  toast('🗑️ Expense removed');
+}
+
+let currentFilter = 'all';
+function filterExp(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('f-active'));
+  btn.classList.add('f-active');
+  renderExpenses();
+}
+
+function renderExpenses() {
+  const tbody = document.getElementById('exp-body');
+  const list  = currentFilter==='all' ? S.expenses : S.expenses.filter(e=>e.category===currentFilter);
+  if (!list.length) { tbody.innerHTML = '<tr><td class="tbl-empty" colspan="8">No expenses</td></tr>'; return; }
+  tbody.innerHTML = list.map(e => {
+    const payer     = S.members.find(m => m.id===e.paidBy);
+    const payerName = payer ? payer.name : '?';
+    const payerColor= payer ? payer.color : '#888';
+    const n         = e.splitWith.length;
+    const perPerson = n > 0 ? e.amount / n : e.amount;
+    return `<tr>
+      <td style="font-weight:500">${e.desc}</td>
+      <td><span class="pill pill-${e.category}">${CAT_ICON[e.category]} ${e.category}</span></td>
+      <td style="font-weight:500;color:var(--accent)">${fmt(e.amount)}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:5px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${payerColor};display:inline-block"></span>${payerName}
+      </span></td>
+      <td style="color:var(--text2)">${n} person${n!==1?'s':''}</td>
+      <td style="color:var(--text2)">${fmt(perPerson)}</td>
+      <td style="color:var(--text2)">${e.date||''}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function selectAllSplit() {
+  document.querySelectorAll('.split-cb').forEach(c => c.checked = true);
+}
+
+function renderPaidBySelect() {
+  const sel = document.getElementById('ePaidBy');
+  sel.innerHTML = S.members.length
+    ? S.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')
+    : '<option value="">— add members first —</option>';
+}
+
+function renderSplitChecks() {
+  const wrap = document.getElementById('split-checks');
+  if (!S.members.length) { wrap.innerHTML = '<div style="color:var(--text3);font-size:.83rem;padding:4px 0">Add members first</div>'; return; }
+  wrap.innerHTML = S.members.map(m =>
+    `<label class="p-check">
+      <input type="checkbox" class="split-cb" value="${m.id}" checked/>
+      <span style="width:7px;height:7px;border-radius:50%;background:${m.color};display:inline-block"></span>
+      ${m.name}
+    </label>`).join('');
+}
+
+// ─────────────────────────────────────────────
+// BALANCE COMPUTATION
+//
+// netBal[i] = totalPaid[i] - fairShare[i]
+//   +ve → creditor (is owed money)
+//   -ve → debtor   (owes money)
+// ─────────────────────────────────────────────
+function computeBalances() {
+  const totalPaid = {};
+  const fairShare = {};
+  S.members.forEach(m => { totalPaid[m.id] = 0; fairShare[m.id] = 0; });
+
+  S.expenses.forEach(e => {
+    // payer fronted the full amount
+    if (totalPaid[e.paidBy] !== undefined) totalPaid[e.paidBy] += e.amount;
+    else totalPaid[e.paidBy] = e.amount;
+
+    // each person in splitWith owes their share
+    const n = e.splitWith.length;
+    if (n === 0) return;
+    const pp = e.amount / n;
+    e.splitWith.forEach(id => {
+      if (fairShare[id] !== undefined) fairShare[id] += pp;
+      else fairShare[id] = pp;
+    });
+  });
+
+  const netBal = {};
+  S.members.forEach(m => {
+    netBal[m.id] = (totalPaid[m.id]||0) - (fairShare[m.id]||0);
+  });
+
+  return { totalPaid, fairShare, netBal };
+}
+
+// ─────────────────────────────────────────────
+// PER-EXPENSE SETTLEMENT TRANSACTIONS
+//
+// Instead of net-settling across all expenses,
+// we produce one transaction PER EXPENSE per debtor,
+// showing exactly who owes what and for which event.
+// This gives full transparency without collapsing rows.
+//
+// Key format: debtorId__creditorId__expenseId
+// ─────────────────────────────────────────────
+function computeExpenseTransactions() {
+  const txns = [];
+  const EPSILON = 0.005;
+
+  S.expenses.forEach(exp => {
+    const n = exp.splitWith.length;
+    if (n === 0) return;
+    const payerMember = S.members.find(m => m.id === exp.paidBy);
+    if (!payerMember) return;
+
+    const pp = exp.amount / n;  // exact per-person share
+
+    exp.splitWith.forEach(sid => {
+      // The payer doesn't owe themselves
+      if (sid === exp.paidBy) return;
+      const debtorMember = S.members.find(m => m.id === sid);
+      if (!debtorMember) return;
+      if (pp < EPSILON) return;
+
+      const key = `${sid}__${exp.paidBy}__${exp.id}`;
+      txns.push({
+        key,
+        from:    debtorMember,   // who pays
+        to:      payerMember,    // who receives
+        amount:  pp,
+        expDesc: exp.desc,
+        expCat:  exp.category,
+        expDate: exp.date || ''
+      });
+    });
+  });
+
+  return txns;
+}
+
+// ─────────────────────────────────────────────
+// SETTLE UP RENDER
+// ─────────────────────────────────────────────
+function markPaid(key) {
+  if (S.paidTxns.includes(key)) {
+    S.paidTxns = S.paidTxns.filter(k => k !== key);
+  } else {
+    S.paidTxns.push(key);
+  }
+  save();
+  renderSettle();
+}
+
+function markAllPaid() {
+  const txns = computeExpenseTransactions();
+  txns.forEach(t => { if (!S.paidTxns.includes(t.key)) S.paidTxns.push(t.key); });
+  save();
+  renderSettle();
+  toast('✅ All dues marked as paid!');
+}
+
+function markAllPaidForCreditor(creditorId) {
+  const txns = computeExpenseTransactions().filter(t => t.to.id === creditorId && !S.paidTxns.includes(t.key));
+  txns.forEach(t => S.paidTxns.push(t.key));
+  save();
+  renderSettle();
+  const name = S.members.find(m=>m.id===creditorId)?.name || '';
+  toast(`✅ All dues to ${name} marked paid!`);
+}
+
+function renderSettle() {
+  const el = document.getElementById('settle-content');
+  if (!S.members.length || !S.expenses.length) {
+    el.innerHTML = '<div class="tbl-empty">Add members and expenses first.</div>';
+    renderPerPerson();
+    return;
+  }
+
+  const allTxns = computeExpenseTransactions();
+
+  if (!allTxns.length) {
+    el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:1.5rem 0">
+      <div style="font-size:2rem">🎉</div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--accent)">Everyone is settled up!</div>
+      <div style="color:var(--text2);font-size:.85rem">All expenses are perfectly balanced.</div>
+    </div>`;
+    renderPerPerson();
+    return;
+  }
+
+  const pending  = allTxns.filter(t => !S.paidTxns.includes(t.key));
+  const paidList = allTxns.filter(t =>  S.paidTxns.includes(t.key));
+  const pendingTotal = pending.reduce((s,t) => s + t.amount, 0);
+
+  // ── Summary bar ──────────────────────────────
+  let html = `
+    <div class="settle-bar">
+      <div class="settle-stat"><div class="ss-val">${allTxns.length}</div><div class="ss-lbl">Total</div></div>
+      <div class="settle-stat"><div class="ss-val" style="color:var(--accent-r)">${pending.length}</div><div class="ss-lbl">Pending</div></div>
+      <div class="settle-stat"><div class="ss-val" style="color:var(--accent)">${paidList.length}</div><div class="ss-lbl">Paid</div></div>
+      <div class="settle-stat"><div class="ss-val">${fmt(pendingTotal)}</div><div class="ss-lbl">Still Owed</div></div>
+    </div>`;
+
+  // ── Pending section, grouped by creditor (receiver) ──
+  if (pending.length) {
+    html += `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="settle-lbl">Pending (${pending.length})</div>
+        <button class="btn-pay-all" onclick="markAllPaid()">✓ Pay All</button>
+      </div>`;
+
+    // Group by creditor (to.id)
+    const creditorGroups = groupByCreditor(pending);
+    html += renderCreditorGroups(creditorGroups, false);
+  } else {
+    html += `<div style="color:var(--accent);font-size:.88rem;margin-bottom:10px">✓ All pending dues cleared!</div>`;
+  }
+
+  // ── Paid section ──────────────────────────────
+  if (paidList.length) {
+    html += `<div class="settle-lbl" style="margin-top:1.5rem;margin-bottom:10px">Paid ✓ (${paidList.length})</div>`;
+    const creditorGroupsPaid = groupByCreditor(paidList);
+    html += renderCreditorGroups(creditorGroupsPaid, true);
+  }
+
+  el.innerHTML = html;
+  renderPerPerson();
+}
+
+function groupByCreditor(txns) {
+  // Returns Map: creditorId → { member, txns[] }
+  const map = new Map();
+  txns.forEach(t => {
+    if (!map.has(t.to.id)) map.set(t.to.id, { member: t.to, txns: [] });
+    map.get(t.to.id).txns.push(t);
+  });
+  return map;
+}
+
+function renderCreditorGroups(groupMap, isPaidSection) {
+  let html = '';
+  groupMap.forEach(({ member: cred, txns: rows }) => {
+    const groupTotal = rows.reduce((s,t) => s+t.amount, 0);
+    const pendingInGroup = rows.filter(t => !S.paidTxns.includes(t.key));
+    const allPaidInGroup = pendingInGroup.length === 0;
+
+    // Sort rows by debtor name then expense date
+    rows.sort((a,b) => a.from.name.localeCompare(b.from.name) || a.expDate.localeCompare(b.expDate));
+
+    html += `<div class="creditor-group">
+      <div class="creditor-header">
+        <div class="creditor-header-left">
+          <div class="s-avatar" style="background:${cred.color}22;color:${cred.color}">${cred.name.slice(0,2).toUpperCase()}</div>
+          <div>
+            <div class="creditor-title">${cred.name} <span style="color:var(--text2);font-size:.75rem;font-weight:400">receives</span></div>
+            <div class="creditor-subtitle">${rows.length} payment${rows.length!==1?'s':''}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="creditor-total">${fmt(groupTotal)}</div>
+          ${!isPaidSection && !allPaidInGroup ? `<button class="btn-pay-all" style="padding:6px 12px;font-size:.75rem" onclick="markAllPaidForCreditor('${cred.id}')">Pay All</button>` : ''}
+          ${cred.upi ? `<div class="s-upi">${cred.upi}</div>` : ''}
+        </div>
+      </div>
+      <div class="creditor-rows">`;
+
+    rows.forEach(t => {
+      const isPaid = S.paidTxns.includes(t.key);
+      html += `
+        <div class="s-row${isPaid?' is-paid':''}">
+          <div class="s-row-left">
+            <div class="s-avatar" style="background:${t.from.color}22;color:${t.from.color}">${t.from.name.slice(0,2).toUpperCase()}</div>
+            <div>
+              <div class="s-name">${t.from.name}</div>
+              <div class="s-sub">pays</div>
+            </div>
+          </div>
+          <div class="s-row-mid">
+            <div class="s-amt${isPaid?' s-amt-paid':''}">${fmt(t.amount)}</div>
+            <div class="s-arrow"><div class="s-line"></div>▶<div class="s-line"></div></div>
+          </div>
+          <div class="s-row-right">
+            <div class="s-exp-label">${CAT_ICON[t.expCat]} ${t.expDesc}${t.expDate ? ' · '+t.expDate : ''}</div>
+            <button class="${isPaid?'btn-undo':'btn-pay'}" onclick="markPaid('${t.key}')">
+              ${isPaid?'↩ Undo':'✓ Paid'}
+            </button>
+          </div>
+        </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+  return html;
+}
+
+// ─────────────────────────────────────────────
+// PER-PERSON BREAKDOWN
+// ─────────────────────────────────────────────
+function renderPerPerson() {
+  const tbody = document.getElementById('pp-body');
+  if (!S.members.length) { tbody.innerHTML = '<tr><td class="tbl-empty" colspan="7">No data</td></tr>'; return; }
+  const { netBal } = computeBalances();
+  tbody.innerHTML = S.members.map(m => {
+    const cats = {food:0,travel:0,outing:0,other:0};
+    S.expenses.forEach(e => {
+      if (e.splitWith.includes(m.id)) {
+        cats[e.category] = (cats[e.category]||0) + (e.amount / e.splitWith.length);
+      }
+    });
+    const totalShare = Object.values(cats).reduce((a,b)=>a+b,0);
+    const bal = netBal[m.id] || 0;
+    return `<tr>
+      <td><span style="display:inline-flex;align-items:center;gap:7px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${m.color};display:inline-block"></span>${m.name}
+      </span></td>
+      <td>${fmt(cats.food)}</td>
+      <td>${fmt(cats.travel)}</td>
+      <td>${fmt(cats.outing)}</td>
+      <td>${fmt(cats.other)}</td>
+      <td style="font-weight:500;color:var(--accent)">${fmt(totalShare)}</td>
+      <td style="font-weight:500;color:${bal>=0?'var(--accent)':'var(--accent-r)'}">
+        ${bal>=0?'+':''}${fmt(Math.abs(bal)).replace(sym(),'')}${sym()}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// CURRENCY
+// ─────────────────────────────────────────────
+function convertCurrency() {
+  const amt  = parseFloat(document.getElementById('cvtAmt').value);
+  const from = document.getElementById('cvtFrom').value;
+  const to   = document.getElementById('cvtTo').value;
+  if (!amt || isNaN(amt)) return toast('⚠️ Enter a valid amount');
+  const inINR  = amt / RATE_MAP[from];
+  const result = inINR * RATE_MAP[to];
+  document.getElementById('cvt-result').textContent = `${amt} ${from} = ${result.toFixed(4)} ${to}`;
+}
+
+// ─────────────────────────────────────────────
+// CSV EXPORT
+// ─────────────────────────────────────────────
+function exportCSV() {
+  if (!S.expenses.length) return toast('⚠️ No expenses to export');
+  const rows = [['Description','Category','Amount','Paid By','Split Between','Per Person','Date']];
+  S.expenses.forEach(e => {
+    const payer  = S.members.find(m=>m.id===e.paidBy)?.name || '?';
+    const splits = e.splitWith.map(id=>S.members.find(m=>m.id===id)?.name||'?').join(' & ');
+    const pp     = e.splitWith.length ? e.amount/e.splitWith.length : e.amount;
+    rows.push([e.desc, e.category, e.amount.toFixed(2), payer, splits, pp.toFixed(2), e.date||'']);
+  });
+  const csv  = rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = (activeTrip()?.name||'splitmate')+'_expenses.csv';
+  a.click();
+  toast('✅ CSV exported!');
+}
+
+// ─────────────────────────────────────────────
+// PERSIST
+// ─────────────────────────────────────────────
+function save() {
+  saveTripData();
+  try { localStorage.setItem('splitmate_v3', JSON.stringify(S)); } catch(e){}
+}
+
+function load() {
+  try {
+    // Try v3 first, then fall back to v2 for backwards compat
+    const raw = localStorage.getItem('splitmate_v3') || localStorage.getItem('splitmate_v2');
+    if (!raw) return;
+    const loaded = JSON.parse(raw);
+    S.trips    = loaded.trips    || [];
+    S.activeId = loaded.activeId || null;
+    S.tripData = loaded.tripData || {};
+    S.theme    = loaded.theme    || 'dark';
+    // Migrate old paidTxns keys if they exist — just clear them (old format incompatible)
+    S.paidTxns = [];
+    if (S.activeId) loadTripData(S.activeId);
+    else { S.members=[]; S.expenses=[]; S.paidTxns=[]; }
+  } catch(e) { console.warn('Load failed', e); }
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const sp = document.getElementById('splash');
+    sp.style.opacity = '0';
+    setTimeout(() => sp.remove(), 500);
+  }, 1900);
+
+  load();
+  applyTheme();
+  buildSwatches();
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('tripDate').value = today;
+  document.getElementById('eDate').value    = today;
+
+  renderDashboard();
+  renderMembers();
+  renderExpenses();
+  renderPaidBySelect();
+  renderSplitChecks();
+  renderTrips();
+
+  if (!activeTrip()) {
+    document.getElementById('trip-form-card').style.display = 'block';
+    document.getElementById('hero-area').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>

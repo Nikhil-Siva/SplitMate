@@ -1,0 +1,44 @@
+{
+  "name": "splitmate",
+  "version": "1.0.0",
+  "description": "Group expense splitter — track outing, food & travel costs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [
+    "expense",
+    "splitter",
+    "electron",
+    "group"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.yourname.splitmate",
+    "productName": "SplitMate",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "tray.png"
+    ],
+    "mac": {
+      "category": "public.app-category.finance"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
